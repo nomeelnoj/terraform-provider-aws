@@ -89,6 +89,12 @@ func (p *servicePackage) SDKDataSources(ctx context.Context) []*inttypes.Service
 			Name:     "Multi-Region Access Point",
 			Region:   unique.Make(inttypes.ResourceRegionDefault()),
 		},
+		{
+			Factory:  dataSourceStorageLensConfiguration,
+			TypeName: "aws_s3control_storage_lens_configuration",
+			Name:     "Storage Lens Configuration",
+			Region:   unique.Make(inttypes.ResourceRegionDefault()),
+		},
 	}
 }
 
