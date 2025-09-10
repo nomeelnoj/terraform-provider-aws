@@ -18,6 +18,34 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/names"
 )
 
+func TestAccS3ControlStorageLensConfigurationDataSource_basic(t *testing.T) {
+	ctx := acctest.Context(t)
+	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
+	resourceName := "aws_s3control_storage_lens_configuration.test"
+	dataSourceName := "data.aws_s3control_storage_lens_configuration.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { acctest.PreCheck(ctx, t) },
+		ErrorCheck:               acctest.ErrorCheck(t, names.S3ControlServiceID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckStorageLensConfigurationDestroy(ctx),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccStorageLensConfigurationDataSourceConfig_basic(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(resourceName, names.AttrAccountID, dataSourceName, names.AttrAccountID),
+					resource.TestCheckResourceAttrPair(resourceName, names.AttrARN, dataSourceName, names.AttrARN),
+					resource.TestCheckResourceAttrPair(resourceName, "config_id", dataSourceName, "config_id"),
+					resource.TestCheckResourceAttr(dataSourceName, names.AttrName, rName),
+					resource.TestCheckResourceAttrPair(resourceName, "storage_lens_configuration.#", dataSourceName, "storage_lens_configuration.#"),
+					resource.TestCheckResourceAttrPair(resourceName, "storage_lens_configuration.0.enabled", dataSourceName, "storage_lens_configuration.0.enabled"),
+					resource.TestCheckResourceAttrPair(resourceName, "storage_lens_configuration.0.account_level.#", dataSourceName, "storage_lens_configuration.0.account_level.#"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccS3ControlStorageLensConfiguration_basic(t *testing.T) {
 	ctx := acctest.Context(t)
 	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
@@ -387,6 +415,26 @@ resource "aws_s3control_storage_lens_configuration" "test" {
       bucket_level {}
     }
   }
+}
+`, rName)
+}
+
+func testAccStorageLensConfigurationDataSourceConfig_basic(rName string) string {
+	return fmt.Sprintf(`
+resource "aws_s3control_storage_lens_configuration" "test" {
+  config_id = %[1]q
+
+  storage_lens_configuration {
+    enabled = true
+
+    account_level {
+      bucket_level {}
+    }
+  }
+}
+
+data "aws_s3control_storage_lens_configuration" "test" {
+  name = aws_s3control_storage_lens_configuration.test.config_id
 }
 `, rName)
 }
