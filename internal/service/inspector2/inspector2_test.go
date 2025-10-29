@@ -13,6 +13,14 @@ func TestAccInspector2_serial(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]map[string]func(t *testing.T){
+		"CodeScanningConfiguration": {
+			acctest.CtBasic:                      testAccCodeScanningConfiguration_basic,
+			"periodicScan":                       testAccCodeScanningConfiguration_periodicScan,
+			"continuousIntegrationScan":          testAccCodeScanningConfiguration_continuousIntegrationScan,
+			"scopeSettings":                      testAccCodeScanningConfiguration_scopeSettings,
+			"tags":                               testAccCodeScanningConfiguration_tags,
+			acctest.CtDisappears:                 testAccCodeScanningConfiguration_disappears,
+		},
 		"Enabler": {
 			acctest.CtBasic:                      testAccEnabler_basic,
 			"accountID":                          testAccEnabler_accountID,
