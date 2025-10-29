@@ -119,6 +119,7 @@ func resourceCodeScanningConfiguration() *schema.Resource {
 			"scope_settings": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -169,7 +170,7 @@ func resourceCodeScanningConfigurationRead(ctx context.Context, d *schema.Resour
 	var diags diag.Diagnostics
 	conn := meta.(*conns.AWSClient).Inspector2Client(ctx)
 
-	config, err := findCodeScanningConfigurationByARN(ctx, conn, d.Id())
+	output, err := findCodeScanningConfigurationByARN(ctx, conn, d.Id())
 
 	if !d.IsNewResource() && tfresource.NotFound(err) {
 		log.Printf("[WARN] Inspector Code Scanning Configuration (%s) not found, removing from state", d.Id())
@@ -181,17 +182,17 @@ func resourceCodeScanningConfigurationRead(ctx context.Context, d *schema.Resour
 		return sdkdiag.AppendErrorf(diags, "reading Inspector Code Scanning Configuration (%s): %s", d.Id(), err)
 	}
 
-	d.Set(names.AttrARN, config.ScanConfigurationArn)
-	if err := d.Set("configuration", flattenCodeSecurityScanConfiguration(config.Configuration)); err != nil {
+	d.Set(names.AttrARN, output.ScanConfigurationArn)
+	if err := d.Set("configuration", flattenCodeSecurityScanConfiguration(output.Configuration)); err != nil {
 		return sdkdiag.AppendErrorf(diags, "setting configuration: %s", err)
 	}
-	d.Set("level", config.Level)
-	d.Set(names.AttrName, config.Name)
-	if err := d.Set("scope_settings", flattenScopeSettings(config.ScopeSettings)); err != nil {
+	d.Set("level", output.Level)
+	d.Set(names.AttrName, output.Name)
+	if err := d.Set("scope_settings", flattenScopeSettings(output.ScopeSettings)); err != nil {
 		return sdkdiag.AppendErrorf(diags, "setting scope_settings: %s", err)
 	}
 
-	setTagsOut(ctx, config.Tags)
+	setTagsOut(ctx, output.Tags)
 
 	return diags
 }
@@ -202,17 +203,8 @@ func resourceCodeScanningConfigurationUpdate(ctx context.Context, d *schema.Reso
 
 	if d.HasChangesExcept(names.AttrTags, names.AttrTagsAll) {
 		input := &inspector2.UpdateCodeSecurityScanConfigurationInput{
+			Configuration:        expandCodeSecurityScanConfiguration(d.Get("configuration").([]interface{})),
 			ScanConfigurationArn: aws.String(d.Id()),
-		}
-
-		if d.HasChange("configuration") {
-			input.Configuration = expandCodeSecurityScanConfiguration(d.Get("configuration").([]interface{}))
-		}
-
-		if d.HasChange("scope_settings") {
-			if v, ok := d.GetOk("scope_settings"); ok && len(v.([]interface{})) > 0 && v.([]interface{})[0] != nil {
-				input.ScopeSettings = expandScopeSettings(v.([]interface{}))
-			}
 		}
 
 		_, err := conn.UpdateCodeSecurityScanConfiguration(ctx, input)
@@ -245,7 +237,7 @@ func resourceCodeScanningConfigurationDelete(ctx context.Context, d *schema.Reso
 	return diags
 }
 
-func findCodeScanningConfigurationByARN(ctx context.Context, conn *inspector2.Client, arn string) (*awstypes.CodeSecurityScanConfiguration, error) {
+func findCodeScanningConfigurationByARN(ctx context.Context, conn *inspector2.Client, arn string) (*inspector2.GetCodeSecurityScanConfigurationOutput, error) {
 	input := &inspector2.GetCodeSecurityScanConfigurationInput{
 		ScanConfigurationArn: aws.String(arn),
 	}
@@ -263,11 +255,11 @@ func findCodeScanningConfigurationByARN(ctx context.Context, conn *inspector2.Cl
 		return nil, err
 	}
 
-	if output == nil || output.ScanConfiguration == nil {
+	if output == nil {
 		return nil, tfresource.NewEmptyResultError(input)
 	}
 
-	return output.ScanConfiguration, nil
+	return output, nil
 }
 
 func expandCodeSecurityScanConfiguration(tfList []interface{}) *awstypes.CodeSecurityScanConfiguration {
