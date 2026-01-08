@@ -190,8 +190,10 @@ func testAccCheckCapacityManagerSettingsDestroy(ctx context.Context) resource.Te
 	return func(s *terraform.State) error {
 		conn := acctest.Provider.Meta().(*conns.AWSClient).EC2Client(ctx)
 
-		output, err := tfec2.FindCapacityManagerAttributes(ctx, conn)
+		// Try to get the attributes - if disabled, this should return NotFound
+		_, err := tfec2.FindCapacityManagerAttributes(ctx, conn)
 
+		// NotFound error is expected when disabled (destroy succeeded)
 		if retry.NotFound(err) {
 			return nil
 		}
@@ -200,11 +202,8 @@ func testAccCheckCapacityManagerSettingsDestroy(ctx context.Context) resource.Te
 			return err
 		}
 
-		if output.CapacityManagerStatus != types.CapacityManagerStatusDisabled {
-			return fmt.Errorf("EC2 Capacity Manager not disabled on resource removal")
-		}
-
-		return nil
+		// If we got here, the resource is still enabled which means destroy failed
+		return fmt.Errorf("EC2 Capacity Manager not disabled on resource removal")
 	}
 }
 
@@ -219,15 +218,16 @@ func testAccCheckCapacityManagerSettings(ctx context.Context, n string, enabled 
 
 		output, err := tfec2.FindCapacityManagerAttributes(ctx, conn)
 
+		// If disabled, the finder returns NotFound error
+		if !enabled && retry.NotFound(err) {
+			return nil
+		}
+
 		if err != nil {
 			return err
 		}
 
-		expectedStatus := types.CapacityManagerStatusDisabled
-		if enabled {
-			expectedStatus = types.CapacityManagerStatusEnabled
-		}
-
+		expectedStatus := types.CapacityManagerStatusEnabled
 		if output.CapacityManagerStatus != expectedStatus {
 			return fmt.Errorf("EC2 Capacity Manager status = %s, expected %s", output.CapacityManagerStatus, expectedStatus)
 		}

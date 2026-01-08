@@ -65,6 +65,13 @@ func resourceCapacityManagerSettingsCreate(ctx context.Context, d *schema.Resour
 		if err != nil {
 			return sdkdiag.AppendErrorf(diags, "enabling EC2 Capacity Manager: %s", err)
 		}
+	} else {
+		input := &ec2.DisableCapacityManagerInput{}
+
+		_, err := conn.DisableCapacityManager(ctx, input)
+		if err != nil {
+			return sdkdiag.AppendErrorf(diags, "disabling EC2 Capacity Manager: %s", err)
+		}
 	}
 
 	d.SetId(meta.(*conns.AWSClient).Region(ctx))
@@ -78,9 +85,16 @@ func resourceCapacityManagerSettingsRead(ctx context.Context, d *schema.Resource
 
 	output, err := findCapacityManagerAttributes(ctx, conn)
 
-	if !d.IsNewResource() && retry.NotFound(err) {
-		log.Printf("[WARN] EC2 Capacity Manager Settings %s not found, removing from state", d.Id())
-		d.SetId("")
+	if retry.NotFound(err) {
+		// If the resource is disabled, we consider it as not found for non-new resources
+		if !d.IsNewResource() {
+			log.Printf("[WARN] EC2 Capacity Manager Settings %s not found, removing from state", d.Id())
+			d.SetId("")
+			return diags
+		}
+		// For new resources, treat disabled as a valid state
+		d.Set(names.AttrEnabled, false)
+		d.Set("organizations_access", false)
 		return diags
 	}
 
@@ -120,7 +134,13 @@ func resourceCapacityManagerSettingsUpdate(ctx context.Context, d *schema.Resour
 				return sdkdiag.AppendErrorf(diags, "disabling EC2 Capacity Manager: %s", err)
 			}
 		}
-	} else if d.HasChange("organizations_access") {
+	}
+
+	// Handle organizations_access change independently (only if not already handled by enable)
+	// When enabled=true and organizations_access changes, EnableCapacityManager above handles it
+	// When enabled=false, organizations_access changes are not relevant (service is disabled)
+	// So we only need to update organizations_access when enabled stays true but organizations_access changes
+	if !d.HasChange(names.AttrEnabled) && d.HasChange("organizations_access") {
 		organizationsAccess := d.Get("organizations_access").(bool)
 		input := &ec2.UpdateCapacityManagerOrganizationsAccessInput{
 			OrganizationsAccess: aws.Bool(organizationsAccess),
