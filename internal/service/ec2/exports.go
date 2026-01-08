@@ -8,6 +8,7 @@ var (
 	CustomFiltersBlock                                                      = customFiltersBlock
 	DeleteNetworkInterface                                                  = deleteNetworkInterface
 	DetachNetworkInterface                                                  = detachNetworkInterface
+	FindCapacityManagerAttributes                                           = findCapacityManagerAttributes
 	FindImageByID                                                           = findImageByID
 	FindInstanceByID                                                        = findInstanceByID
 	FindIPAMPoolAllocationsByIPAMPoolIDAndResourceID                        = findIPAMPoolAllocationsByIPAMPoolIDAndResourceID
@@ -26,6 +27,7 @@ var (
 	NewCustomFilterListFramework                                            = newCustomFilterListFramework
 	NewFilter                                                               = newFilter
 	ResourceAMI                                                             = resourceAMI
+	ResourceCapacityManagerSettings                                         = resourceCapacityManagerSettings
 	ResourceSecurityGroup                                                   = resourceSecurityGroup
 	ResourceTransitGateway                                                  = resourceTransitGateway
 	ResourceTransitGatewayConnectPeer                                       = resourceTransitGatewayConnectPeer

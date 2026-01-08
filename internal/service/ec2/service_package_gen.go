@@ -996,6 +996,16 @@ func (p *servicePackage) SDKResources(ctx context.Context) []*inttypes.ServicePa
 			Region:   unique.Make(inttypes.ResourceRegionDefault()),
 		},
 		{
+			Factory:  resourceCapacityManagerSettings,
+			TypeName: "aws_ec2_capacity_manager_settings",
+			Name:     "Capacity Manager Settings",
+			Region:   unique.Make(inttypes.ResourceRegionDefault()),
+			Identity: inttypes.RegionalSingletonIdentity(),
+			Import: inttypes.SDKv2Import{
+				WrappedImport: true,
+			},
+		},
+		{
 			Factory:  resourceCapacityReservation,
 			TypeName: "aws_ec2_capacity_reservation",
 			Name:     "Capacity Reservation",

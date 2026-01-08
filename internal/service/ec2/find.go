@@ -4712,6 +4712,28 @@ func findImageLaunchPermission(ctx context.Context, conn *ec2.Client, imageID, a
 	return nil, &sdkretry.NotFoundError{}
 }
 
+func findCapacityManagerAttributes(ctx context.Context, conn *ec2.Client) (*ec2.GetCapacityManagerAttributesOutput, error) {
+	var input ec2.GetCapacityManagerAttributesInput
+	output, err := conn.GetCapacityManagerAttributes(ctx, &input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if output == nil {
+		return nil, tfresource.NewEmptyResultError(input)
+	}
+
+	// Disabled => NotFound.
+	if output.CapacityManagerStatus == awstypes.CapacityManagerStatusDisabled {
+		return nil, &sdkretry.NotFoundError{
+			Message: string(output.CapacityManagerStatus),
+		}
+	}
+
+	return output, nil
+}
+
 func findSerialConsoleAccessStatus(ctx context.Context, conn *ec2.Client) (*ec2.GetSerialConsoleAccessStatusOutput, error) {
 	var input ec2.GetSerialConsoleAccessStatusInput
 	output, err := conn.GetSerialConsoleAccessStatus(ctx, &input)
